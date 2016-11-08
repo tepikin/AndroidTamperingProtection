@@ -27,12 +27,12 @@ protection.validate();
 
 Max protection varian:
 ```java
-        TamperingProtection protection = new TamperingProtection(this);
-        protection.setAcceptedStores(TamperingProtection.GOOGLE_PLAY_STORE_PACKAGE); // apps installed only from google play
-        protection.setAcceptedPackageNames("ru.lazard.sample.Lite_Version","ru.lazard.sample.Pro_Version"); // lite and pro package names
-         protection.setAcceptedSignatures("CC:0C:FB:83:8C:88:A9:66:BB:0D:C9:C8:EB:A6:4F:32"); // only release md5 fingerprint
-        protection.setAcceptStartOnEmulator(false); // not allowed for emulators
-        protection.setAcceptStartInDebugMode(false); // not allowed run in debug mode
+TamperingProtection protection = new TamperingProtection(this);
+protection.setAcceptedStores(TamperingProtection.GOOGLE_PLAY_STORE_PACKAGE); // apps installed only from google play
+protection.setAcceptedPackageNames("ru.lazard.sample.Lite_Version","ru.lazard.sample.Pro_Version"); // lite and pro package names
+protection.setAcceptedSignatures("CC:0C:FB:83:8C:88:A9:66:BB:0D:C9:C8:EB:A6:4F:32"); // only release md5 fingerprint
+protection.setAcceptStartOnEmulator(false); // not allowed for emulators
+protection.setAcceptStartInDebugMode(false); // not allowed run in debug mode
 
-        protection.validateAllOrThrowException(); // detailed fail information in Exception.
+protection.validateAllOrThrowException(); // detailed fail information in Exception.
 ```
