@@ -26,5 +26,5 @@ dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile 'com.android.support:appcompat-v7:24.2.1'
 
-    compile project(':tamperingprotection')
+    compile 'com.github.tepikin:AndroidTamperingProtection:0.1'
 }
