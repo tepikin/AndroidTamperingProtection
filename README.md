@@ -57,5 +57,5 @@ dependencies {
     compile 'com.github.tepikin:AndroidTamperingProtection:0.1'
 }
 ```
-
-PS or just copy file [TamperingProtection.java](https://github.com/tepikin/AndroidTamperingProtection/blob/master/tamperingprotection/src/main/java/ru/lazard/tamperingprotection/TamperingProtection.java) to you project.
+---
+**PS** or just copy file [TamperingProtection.java](https://github.com/tepikin/AndroidTamperingProtection/blob/master/tamperingprotection/src/main/java/ru/lazard/tamperingprotection/TamperingProtection.java) to you project.  :)
