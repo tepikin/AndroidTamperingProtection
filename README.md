@@ -27,7 +27,7 @@ protection.validate();// <- bool is valid or tampered.
 
 Max protection varian:
 ```java
-TamperingProtection protection = new TamperingProtection(this);
+TamperingProtection protection = new TamperingProtection(context);
 protection.setAcceptedStores(TamperingProtection.GOOGLE_PLAY_STORE_PACKAGE); // apps installed only from google play
 protection.setAcceptedPackageNames("ru.lazard.sample.Lite_Version","ru.lazard.sample.Pro_Version"); // lite and pro package names
 protection.setAcceptedSignatures("CC:0C:FB:83:8C:88:A9:66:BB:0D:C9:C8:EB:A6:4F:32"); // only release md5 fingerprint
