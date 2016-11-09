@@ -7,10 +7,13 @@ import android.content.pm.Signature;
 import android.os.Build;
 import android.text.TextUtils;
 
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.List;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
 
 /**
  * Class for check is application tampered or not.<br> TamperingProtection check: <br>
@@ -23,12 +26,13 @@ import java.util.List;
  * Simple usage:<br>
  * <code>
  * TamperingProtection protection = new TamperingProtection(this);<br>
+ * protection.setAcceptedDexCrcs(); // don't validate classes.dex CRC code.
  * protection.setAcceptedStores(); // install from any where <br>
  * protection.setAcceptedPackageNames("ru.lazard.sample"); // your package name<br>
  * protection.setAcceptedSignatures("CC:0C:FB:83:8C:88:A9:66:BB:0D:C9:C8:EB:A6:4F:32"); // MD5 fingerprint<br>
  * protection.setAcceptStartOnEmulator(true);// allow run on emulator <br>
  * protection.setAcceptStartInDebugMode(true);// allow run in debug mode <br>
- *
+ * <p>
  * protection.validate();<br>
  * </code>
  * <br><br>
@@ -54,6 +58,7 @@ public class TamperingProtection {
     private List<String> stores = Arrays.asList();
     private List<String> packageNames = Arrays.asList();
     private List<String> signatures = Arrays.asList();
+    private long[] dexCrcs = {};
     private boolean isEmulatorAvailable = true;
     private boolean isDebugAvailable = true;
 
@@ -114,6 +119,15 @@ public class TamperingProtection {
     }
 
     /**
+     * Check Crc (checksum) of classes.dex file in apk. <br><b>Note:</> don't keep CRC codes hardcoded in java classes! Keep it in resources (strings.xml) or in JNI code.
+     *
+     * @param crcs - by default empty (no crc check).
+     */
+    public void setAcceptedDexCrcs(long... crcs) {
+        this.dexCrcs =  crcs;
+    }
+
+    /**
      * Check is app valid or tampered.
      *
      * @return - True if valid. False if tampered.
@@ -139,6 +153,7 @@ public class TamperingProtection {
         validatePackage();
         validateStore();
         validateSignature();
+        validateDexCRC();
 
     }
 
@@ -200,39 +215,58 @@ public class TamperingProtection {
     }
 
     private void validatePackage() throws ValidationException {
-        if (packageNames == null || packageNames.size() <= 0) return;// validation success
+        if (packageNames == null || packageNames.size() <= 0)
+            return;// validation success (no validation need)
         String packageName = context.getApplicationContext().getPackageName();
         if (TextUtils.isEmpty(packageName))
             throw new ValidationException(ValidationException.ERROR_CODE_PACKAGE_NAME_IS_EMPTY, "Current package name is empty: packageName=\"" + packageName + "\";");
         for (String allowedPackageName : packageNames) {
             if (packageName.equalsIgnoreCase(allowedPackageName)) return;// validation success
         }
-        throw new ValidationException(ValidationException.ERROR_CODE_PACKAGE_NAME_NOT_VALID, "Not valid package name:  CurrentPackageName=\"" + packageName + "\";  validPackageNames=\"" + packageNames.toString() + "\";");
+        throw new ValidationException(ValidationException.ERROR_CODE_PACKAGE_NAME_NOT_VALID, "Not valid package name:  CurrentPackageName=\"" + packageName + "\";  validPackageNames=" + packageNames.toString() + ";");
     }
 
     private void validateStore() throws ValidationException {
-        if (stores == null || stores.size() <= 0) return;// validation success
+        if (stores == null || stores.size() <= 0) return;// validation success (no validation need)
         final String installer = context.getPackageManager().getInstallerPackageName(context.getPackageName());
         if (TextUtils.isEmpty(installer))
             throw new ValidationException(ValidationException.ERROR_CODE_STORE_IS_EMPTY, "Current store is empty: store=\"" + installer + "\"; App installed by user (not by store).");
         for (String allowedStore : stores) {
             if (installer.equalsIgnoreCase(allowedStore)) return;// validation success
         }
-        throw new ValidationException(ValidationException.ERROR_CODE_STORE_NOT_VALID, "Not valid store:  CurrentStore=\"" + installer + "\";  validStores=\"" + stores.toString() + "\";");
+        throw new ValidationException(ValidationException.ERROR_CODE_STORE_NOT_VALID, "Not valid store:  CurrentStore=\"" + installer + "\";  validStores=" + stores.toString() + ";");
     }
 
+    private void validateDexCRC() throws ValidationException {
+        if (dexCrcs == null || dexCrcs.length <= 0)
+            return;// validation success (no validation need)
+        try {
+            ZipFile zf = new ZipFile(context.getPackageCodePath());
+            ZipEntry ze = zf.getEntry("classes.dex");
+            long crc = ze.getCrc();
+            for (long allowedDexCrc : dexCrcs) {
+                if (allowedDexCrc == crc) return;// validation success
+            }
+            throw new ValidationException(ValidationException.ERROR_CODE_CRC_NOT_VALID, "Crc code of .dex not valid. CurrentDexCrc=" + crc + "  acceptedDexCrcs=" + Arrays.toString(dexCrcs) + ";");
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new ValidationException(ValidationException.ERROR_CODE_CRC_UNKNOWN_EXCEPTION, "Exception on .dex CNC validation.", e);
+        }
+    }
 
     private void validateSignature() throws ValidationException {
-        if (signatures == null || signatures.size() <= 0) return;// validation success
+        if (signatures == null || signatures.size() <= 0)
+            return;// validation success (no validation need)
         try {
             PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_SIGNATURES);
 
-            if (packageInfo.signatures == null) {
+            if (packageInfo.signatures == null || packageInfo.signatures.length <= 0) {
                 throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_IS_EMPTY, "No signatures found.");
             }
-            if (packageInfo.signatures.length != 1) {
-                throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_MULTIPLE, "Multiple signatures found. Total signatures=" + packageInfo.signatures.length + ";");
-            }
+            // TODO Maybe multiple signatures is a type of tampering, but im not sure. If you sure then uncomment next rows.
+            // if (packageInfo.signatures.length != 1) {
+            //     throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_MULTIPLE, "Multiple signatures found. Total signatures=" + packageInfo.signatures.length + ";");
+            // }
 
             Signature signature = packageInfo.signatures[0];
             MessageDigest md = MessageDigest.getInstance("MD5");
@@ -255,9 +289,9 @@ public class TamperingProtection {
             }
             throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_NOT_VALID, "Not valid signature: CurrentSignature=\"" + md5String + "\";  validSignatures=" + signatures.toString() + ";");
         } catch (PackageManager.NameNotFoundException exception) {
-            throw new ValidationException(ValidationException.ERROR_CODE_UNKNOWN_EXCEPTION, "Exception on signature validation.", exception);
+            throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_UNKNOWN_EXCEPTION, "Exception on signature validation.", exception);
         } catch (NoSuchAlgorithmException exception) {
-            throw new ValidationException(ValidationException.ERROR_CODE_UNKNOWN_EXCEPTION, "Exception on signature validation.", exception);
+            throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_UNKNOWN_EXCEPTION, "Exception on signature validation.", exception);
         }
 
     }
@@ -277,6 +311,9 @@ public class TamperingProtection {
         public static final int ERROR_CODE_SIGNATURE_IS_EMPTY = 8;
         public static final int ERROR_CODE_SIGNATURE_MULTIPLE = 9;
         public static final int ERROR_CODE_SIGNATURE_NOT_VALID = 10;
+        public static final int ERROR_CODE_SIGNATURE_UNKNOWN_EXCEPTION = 11;
+        public static final int ERROR_CODE_CRC_NOT_VALID = 12;
+        public static final int ERROR_CODE_CRC_UNKNOWN_EXCEPTION = 13;
         private final int code;
 
         public ValidationException(int code, String message) {

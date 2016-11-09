@@ -50,7 +50,11 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     }
 
     private void maxProtectionExample() {
+        long dexCrc = Long.parseLong(this.getResources().getString(R.string.dexCrc)); // Keep dexCrc in resources (strings.xml) or in JNI code. Not hardcode in java classes.
+
+
         TamperingProtection protection = new TamperingProtection(this);
+        protection.setAcceptedDexCrcs(dexCrc);
         protection.setAcceptedStores(TamperingProtection.GOOGLE_PLAY_STORE_PACKAGE);
         protection.setAcceptedPackageNames("ru.lazard.sample","ru.lazard.sample.Lite_Version","ru.lazard.sample.Pro_Version");
         protection.setAcceptedSignatures("CC:0C:FB:83:8C:88:A9:66:BB:0D:C9:C8:EB:A6:4F:32","AC:aC:aB:a3:aC:88:A9:66:aB:0D:C9:a8:aB:A6:aF:a2");
@@ -68,6 +72,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void detailedValidation() {
         TamperingProtection protection = new TamperingProtection(this);
+        protection.setAcceptedDexCrcs(); // don't validate classes.dex CRC code.
         protection.setAcceptedStores(); // allow all stores
         protection.setAcceptedPackageNames("ru.lazard.sample");
         protection.setAcceptedSignatures("CC:0C:FB:83:8C:88:A9:66:BB:0D:C9:C8:EB:A6:4F:32");
@@ -85,6 +90,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
 
     private void simpleValidation() {
         TamperingProtection protection = new TamperingProtection(this);
+        protection.setAcceptedDexCrcs(); // don't validate classes.dex CRC code.
+        protection.setAcceptedStores(); // allow all stores
         protection.setAcceptedPackageNames("ru.lazard.sample");
         protection.setAcceptedSignatures("CC:0C:FB:83:8C:88:A9:66:BB:0D:C9:C8:EB:A6:4F:32");
         protection.setAcceptStartOnEmulator(true);
