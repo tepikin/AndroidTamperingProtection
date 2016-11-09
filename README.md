@@ -75,7 +75,7 @@ allprojects {
 **Step 2.** Add the dependency
 ```gradle
 dependencies {
-    compile 'com.github.tepikin:AndroidTamperingProtection:0.1'
+    compile 'com.github.tepikin:AndroidTamperingProtection:0.11'
 }
 ```
 ---
