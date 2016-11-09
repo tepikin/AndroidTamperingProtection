@@ -52,7 +52,6 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     private void maxProtectionExample() {
         long dexCrc = Long.parseLong(this.getResources().getString(R.string.dexCrc)); // Keep dexCrc in resources (strings.xml) or in JNI code. Not hardcode in java classes.
 
-
         TamperingProtection protection = new TamperingProtection(this);
         protection.setAcceptedDexCrcs(dexCrc);
         protection.setAcceptedStores(TamperingProtection.GOOGLE_PLAY_STORE_PACKAGE);

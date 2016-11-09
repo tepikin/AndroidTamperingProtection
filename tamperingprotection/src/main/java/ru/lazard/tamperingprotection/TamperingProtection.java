@@ -1,6 +1,7 @@
 package ru.lazard.tamperingprotection;
 
 import android.content.Context;
+import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
@@ -158,12 +159,19 @@ public class TamperingProtection {
     }
 
     private void validateDebugMode() throws ValidationException {
-        if (!isDebugAvailable && BuildConfig.DEBUG)
-            throw new ValidationException(ValidationException.ERROR_CODE_DEBUG_MODE, "Run in debug mode.");
+        if (isDebugAvailable) return; // // validation success (no validation need)
+
+        // check by BuildConfig
+        if (BuildConfig.DEBUG)
+            throw new ValidationException(ValidationException.ERROR_CODE_DEBUG_MODE, "Run in debug mode checked by BuildConfig.");
+
+        // check by ApplicationInfo
+        boolean isDebuggable =  ( 0 != ( context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE ) );
+        if (isDebuggable) throw new ValidationException(ValidationException.ERROR_CODE_DEBUG_MODE, "Run in debug mode checked by ApplicationInfo. Flags="+context.getApplicationInfo().flags);
     }
 
     private void validateEmulator() throws ValidationException {
-        if (isEmulatorAvailable) return; // validation success
+        if (isEmulatorAvailable) return; // validation success (no validation need)
 
         // received from this project: https://github.com/gingo/android-emulator-detector
         int rating = 0;
