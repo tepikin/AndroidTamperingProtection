@@ -6,15 +6,20 @@ Protect you android app from tampering.
 This Library check is application tampered or not.
 
 TamperingProtection check: <br>
-1) application signature - protection from resign you app. <br>
-2) installer store - app must be inbstalled only from store (not by hand).<br>
-3) package name - sometimes malefactor change package name and sells your application as its.<br>
-4) debug mode - production version of app mustn't run in debug mode.
+1) CRC code of classes.dex - protection from code modification.<br>
+2) application signature - protection from resign you app. <br>
+3) installer store - app must be inbstalled only from store (not by hand).<br>
+4) package name - sometimes malefactor change package name and sells your application as its.<br>
+5) debug mode - production version of app mustn't run in debug mode.<br>
+6) run on emulator - user musn't run app on emulator.<br>
+
+You can choose not all of this protection types. Most usefull is <i>"application signature"</i> and <i>"package name"</i>.
 
 ## How to use
 Simple usage:<br>
 ```java
 TamperingProtection protection = new TamperingProtection(context);
+protection.setAcceptedDexCrcs(); // don't validate classes.dex CRC code.
 protection.setAcceptedStores(); // install from any where 
 protection.setAcceptedPackageNames("ru.lazard.sample"); // your package name
 protection.setAcceptedSignatures("CC:0C:FB:83:8C:88:A9:66:BB:0D:C9:C8:EB:A6:4F:32"); // MD5 fingerprint
@@ -27,7 +32,11 @@ protection.validate();// <- bool is valid or tampered.
 
 Max protection varian:
 ```java
+// Keep dexCrc in resources (strings.xml) or in JNI code. Don't hardcode it in java classes, because it's changes checksum.
+long dexCrc = Long.parseLong(this.getResources().getString(R.string.dexCrc)); 
+
 TamperingProtection protection = new TamperingProtection(context);
+protection.setAcceptedDexCrcs(dexCrc);
 protection.setAcceptedStores(TamperingProtection.GOOGLE_PLAY_STORE_PACKAGE); // apps installed only from google play
 protection.setAcceptedPackageNames("ru.lazard.sample.Lite_Version","ru.lazard.sample.Pro_Version"); // lite and pro package names
 protection.setAcceptedSignatures("CC:0C:FB:83:8C:88:A9:66:BB:0D:C9:C8:EB:A6:4F:32"); // only release md5 fingerprint
