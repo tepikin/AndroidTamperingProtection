@@ -10,7 +10,7 @@ TamperingProtection check: <br>
 3) installer store - app must be inbstalled only from store (not by hand).<br>
 4) package name - sometimes malefactor change package name and sells your application as its.<br>
 5) debug mode - production version of app mustn't run in debug mode.<br>
-6) run on emulator - user musn't run app on emulator.<br>
+6) run on emulator - user mustn't run app on emulator.<br>
 <br>
 You can choose not all of this protection types. Most usefull is <i>"application signature"</i> and <i>"package name"</i>.<br>
 <br>
