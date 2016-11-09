@@ -6,6 +6,7 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.os.Build;
+import android.support.annotation.NonNull;
 import android.text.TextUtils;
 
 import java.io.IOException;
@@ -18,10 +19,12 @@ import java.util.zip.ZipFile;
 
 /**
  * Class for check is application tampered or not.<br> TamperingProtection check: <br>
- * 1) application signature - protection from resign you app. <br>
- * 2) installer store - app must be inbstalled only from store (not by hand).<br>
- * 3) package name - sometimes malefactor change package name and sells your application as its.<br>
- * 4) debug mode - production version of app mustn't run in debug mode.
+ * 1) CRC code of classes.dex - protection from code modification.<br>
+ * 2) application signature - protection from resign you app. <br>
+ * 3) installer store - app must be inbstalled only from store (not by hand).<br>
+ * 4) package name - sometimes malefactor change package name and sells your application as its.<br>
+ * 5) debug mode - production version of app mustn't run in debug mode.<br>
+ * 6) run on emulator - user musn't run app on emulator.<br>
  * <p>
  * <br><br>
  * Simple usage:<br>
@@ -66,6 +69,147 @@ public class TamperingProtection {
 
     public TamperingProtection(Context context) {
         this.context = context;
+    }
+
+    /**
+     * Get CRC code of classes.dex file.<br><b>Note:</b> CRC code of .dex modified each time when you modify java code.
+     *
+     * @param context
+     * @return - CRC code of classes.dex file in apk.
+     * @throws IOException
+     */
+    @NonNull
+    public static long getDexCRC(@NonNull Context context) throws IOException {
+        ZipFile zf = new ZipFile(context.getPackageCodePath());
+        ZipEntry ze = zf.getEntry("classes.dex");
+        return ze.getCrc();
+    }
+
+
+    /**
+     * Get Md5 fingerprint of you app. Method return fingerprint of current signature.<br>
+     * If app signed by debug keystore then method return debug fingerprint
+     * (if signed by release keystore then return release fingerprint).<br><br>
+     * For get MD5 fingerprint from command line:<br><code>
+     * keytool -list -v -keystore &lt;YOU_PATH_TO_KEYSTORE&gt; -alias &lt;YOU_ALIAS&gt; -storepass &lt;YOU_STOREPASS&gt; -keypass &lt;YOU_KEYPASS&gt;
+     * </code><br>
+     * For get MD5 fingerprint for debug keystore:<br><code>
+     * keytool -list -v -keystore ~/.android/debug.keystore -alias androiddebugkey -storepass android -keypass android
+     * </code><br>
+     * Use only <b>MD5</b> fingerprint. They looks like: <code>"CC:0C:FB:83:8C:88:A9:66:BB:0D:C9:C8:EB:A6:4F:32"</code>.
+     *
+     * @param context
+     */
+    @NonNull
+    public static String[] getSignatures(@NonNull Context context) throws PackageManager.NameNotFoundException, NoSuchAlgorithmException {
+        PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_SIGNATURES);
+
+        if (packageInfo.signatures == null || packageInfo.signatures.length <= 0) {
+            return new String[]{};
+        }
+
+        String[] md5Signatures = new String[packageInfo.signatures.length];
+
+        for (int i = 0; i < packageInfo.signatures.length; i++) {
+            Signature signature = packageInfo.signatures[i];
+            if (signature == null) continue;
+
+            MessageDigest md = MessageDigest.getInstance("MD5");
+            md.update(signature.toByteArray());
+            byte[] digits = md.digest();
+
+            char[] hexArray = "0123456789ABCDEF".toCharArray();
+            String md5String = "";
+            for (byte digit : digits) {
+                int pos = digit & 0xFF;
+                md5String += "" + hexArray[pos >> 4] + hexArray[pos & 0x0f] + ":";
+            }
+            if (md5String.length() > 0) {
+                md5String = md5String.substring(0, md5String.length() - 1);
+            }
+
+            md5Signatures[i] = md5String;
+        }
+
+
+        return md5Signatures;
+    }
+
+    /**
+     * Check is current device is emulator.
+     *
+     * @return
+     */
+    public static boolean isEmulator() {
+        // received from this project: https://github.com/gingo/android-emulator-detector
+        int rating = 0;
+        if (Build.PRODUCT.equals("sdk") ||
+                Build.PRODUCT.equals("google_sdk") ||
+                Build.PRODUCT.equals("sdk_x86") ||
+                Build.PRODUCT.equals("vbox86p")) {
+            rating++;
+        }
+        if (Build.MANUFACTURER.equals("unknown") ||
+                Build.MANUFACTURER.equals("Genymotion")) {
+            rating++;
+        }
+        if (Build.BRAND.equals("generic") ||
+                Build.BRAND.equals("generic_x86")) {
+            rating++;
+        }
+        if (Build.DEVICE.equals("generic") ||
+                Build.DEVICE.equals("generic_x86") ||
+                Build.DEVICE.equals("vbox86p")) {
+            rating++;
+        }
+        if (Build.MODEL.equals("sdk") ||
+                Build.MODEL.equals("google_sdk") ||
+                Build.MODEL.equals("Android SDK built for x86")) {
+            rating++;
+        }
+        if (Build.HARDWARE.equals("goldfish") ||
+                Build.HARDWARE.equals("vbox86")) {
+            rating++;
+        }
+        if (Build.FINGERPRINT.contains("generic/sdk/generic") ||
+                Build.FINGERPRINT.contains("generic_x86/sdk_x86/generic_x86") ||
+                Build.FINGERPRINT.contains("generic/google_sdk/generic") ||
+                Build.FINGERPRINT.contains("generic/vbox86p/vbox86p")) {
+            rating++;
+        }
+        return rating > 4;
+    }
+
+    /**
+     * Check is running in debug mode.
+     *
+     * @param context
+     * @return
+     */
+    public static boolean isDebug(Context context) {
+        boolean isDebuggable = (0 != (context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE));
+        return isDebuggable;
+    }
+
+    /**
+     * Get package name of app Installer. Known installers (public Stores) is Google play, Amazon and Samsung store.<br>
+     * Their package names are: <br>{@link #GOOGLE_PLAY_STORE_PACKAGE},<br>{@link #AMAZON_APP_STORE_PACKAGE},<br>{@link #SAMSUNG_APP_STORE_PACKAGE}.
+     *
+     * @param context - package name of app Installer. If return null then app was installed by user (not by store).
+     * @return
+     */
+    public static String getCurrentStore(Context context) {
+        return context.getPackageManager().getInstallerPackageName(context.getPackageName());
+    }
+
+    /**
+     * Get current app package name.
+     *
+     * @param context
+     * @return - current package name
+     */
+    public static String getPackageName(Context context) {
+        return context.getApplicationContext().getPackageName();
     }
 
     /**
@@ -120,12 +264,12 @@ public class TamperingProtection {
     }
 
     /**
-     * Check Crc (checksum) of classes.dex file in apk. <br><b>Note:</> don't keep CRC codes hardcoded in java classes! Keep it in resources (strings.xml) or in JNI code.
+     * Check Crc (checksum) of classes.dex file in apk. It's protection from code modification. <br><b>Note:</b> don't keep CRC codes hardcoded in java classes! Keep it in resources (strings.xml), or in JNI code, or WebServer.
      *
      * @param crcs - by default empty (no crc check).
      */
     public void setAcceptedDexCrcs(long... crcs) {
-        this.dexCrcs =  crcs;
+        this.dexCrcs = crcs;
     }
 
     /**
@@ -161,55 +305,19 @@ public class TamperingProtection {
     private void validateDebugMode() throws ValidationException {
         if (isDebugAvailable) return; // // validation success (no validation need)
 
+        // check by ApplicationInfo
+        if (isDebug(context))
+            throw new ValidationException(ValidationException.ERROR_CODE_DEBUG_MODE, "Run in debug mode checked by ApplicationInfo. Flags=" + context.getApplicationInfo().flags);
+
         // check by BuildConfig
         if (BuildConfig.DEBUG)
             throw new ValidationException(ValidationException.ERROR_CODE_DEBUG_MODE, "Run in debug mode checked by BuildConfig.");
-
-        // check by ApplicationInfo
-        boolean isDebuggable =  ( 0 != ( context.getApplicationInfo().flags & ApplicationInfo.FLAG_DEBUGGABLE ) );
-        if (isDebuggable) throw new ValidationException(ValidationException.ERROR_CODE_DEBUG_MODE, "Run in debug mode checked by ApplicationInfo. Flags="+context.getApplicationInfo().flags);
     }
 
     private void validateEmulator() throws ValidationException {
         if (isEmulatorAvailable) return; // validation success (no validation need)
+        boolean isEmulator = isEmulator();
 
-        // received from this project: https://github.com/gingo/android-emulator-detector
-        int rating = 0;
-        if (Build.PRODUCT.equals("sdk") ||
-                Build.PRODUCT.equals("google_sdk") ||
-                Build.PRODUCT.equals("sdk_x86") ||
-                Build.PRODUCT.equals("vbox86p")) {
-            rating++;
-        }
-        if (Build.MANUFACTURER.equals("unknown") ||
-                Build.MANUFACTURER.equals("Genymotion")) {
-            rating++;
-        }
-        if (Build.BRAND.equals("generic") ||
-                Build.BRAND.equals("generic_x86")) {
-            rating++;
-        }
-        if (Build.DEVICE.equals("generic") ||
-                Build.DEVICE.equals("generic_x86") ||
-                Build.DEVICE.equals("vbox86p")) {
-            rating++;
-        }
-        if (Build.MODEL.equals("sdk") ||
-                Build.MODEL.equals("google_sdk") ||
-                Build.MODEL.equals("Android SDK built for x86")) {
-            rating++;
-        }
-        if (Build.HARDWARE.equals("goldfish") ||
-                Build.HARDWARE.equals("vbox86")) {
-            rating++;
-        }
-        if (Build.FINGERPRINT.contains("generic/sdk/generic") ||
-                Build.FINGERPRINT.contains("generic_x86/sdk_x86/generic_x86") ||
-                Build.FINGERPRINT.contains("generic/google_sdk/generic") ||
-                Build.FINGERPRINT.contains("generic/vbox86p/vbox86p")) {
-            rating++;
-        }
-        boolean isEmulator = rating > 4;
 
         if (isEmulator)
             throw new ValidationException(ValidationException.ERROR_CODE_RUN_ON_EMULATOR, "Device looks like emulator.\n" +
@@ -225,7 +333,7 @@ public class TamperingProtection {
     private void validatePackage() throws ValidationException {
         if (packageNames == null || packageNames.size() <= 0)
             return;// validation success (no validation need)
-        String packageName = context.getApplicationContext().getPackageName();
+        String packageName = getPackageName(context);
         if (TextUtils.isEmpty(packageName))
             throw new ValidationException(ValidationException.ERROR_CODE_PACKAGE_NAME_IS_EMPTY, "Current package name is empty: packageName=\"" + packageName + "\";");
         for (String allowedPackageName : packageNames) {
@@ -236,7 +344,7 @@ public class TamperingProtection {
 
     private void validateStore() throws ValidationException {
         if (stores == null || stores.size() <= 0) return;// validation success (no validation need)
-        final String installer = context.getPackageManager().getInstallerPackageName(context.getPackageName());
+        final String installer = getCurrentStore(context);
         if (TextUtils.isEmpty(installer))
             throw new ValidationException(ValidationException.ERROR_CODE_STORE_IS_EMPTY, "Current store is empty: store=\"" + installer + "\"; App installed by user (not by store).");
         for (String allowedStore : stores) {
@@ -249,9 +357,7 @@ public class TamperingProtection {
         if (dexCrcs == null || dexCrcs.length <= 0)
             return;// validation success (no validation need)
         try {
-            ZipFile zf = new ZipFile(context.getPackageCodePath());
-            ZipEntry ze = zf.getEntry("classes.dex");
-            long crc = ze.getCrc();
+            long crc = getDexCRC(context);
             for (long allowedDexCrc : dexCrcs) {
                 if (allowedDexCrc == crc) return;// validation success
             }
@@ -266,36 +372,23 @@ public class TamperingProtection {
         if (signatures == null || signatures.size() <= 0)
             return;// validation success (no validation need)
         try {
-            PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_SIGNATURES);
+            String[] md5Signatures = getSignatures(context);
 
-            if (packageInfo.signatures == null || packageInfo.signatures.length <= 0) {
+            if (md5Signatures == null || md5Signatures.length <= 0) {
                 throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_IS_EMPTY, "No signatures found.");
             }
             // TODO Maybe multiple signatures is a type of tampering, but im not sure. If you sure then uncomment next rows.
-            // if (packageInfo.signatures.length != 1) {
+            // if (md5Signatures.length != 1) {
             //     throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_MULTIPLE, "Multiple signatures found. Total signatures=" + packageInfo.signatures.length + ";");
             // }
 
-            Signature signature = packageInfo.signatures[0];
-            MessageDigest md = MessageDigest.getInstance("MD5");
-            md.update(signature.toByteArray());
-            byte[] digits = md.digest();
-
-            char[] hexArray = "0123456789ABCDEF".toCharArray();
-            String md5String = "";
-            for (byte digit : digits) {
-                int pos = digit & 0xFF;
-                md5String += "" + hexArray[pos >> 4] + hexArray[pos & 0x0f] + ":";
+            for (String md5Signature : md5Signatures) {
+                for (String allowedSignature : signatures) {
+                    if (md5Signature.equalsIgnoreCase(allowedSignature))
+                        return;// validation success
+                }
             }
-            if (md5String.length() > 0) {
-                md5String = md5String.substring(0, md5String.length() - 1);
-            }
-
-
-            for (String allowedSignature : signatures) {
-                if (md5String.equalsIgnoreCase(allowedSignature)) return;// validation success
-            }
-            throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_NOT_VALID, "Not valid signature: CurrentSignature=\"" + md5String + "\";  validSignatures=" + signatures.toString() + ";");
+            throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_NOT_VALID, "Not valid signature: CurrentSignatures=" + md5Signatures + ";  validSignatures=" + signatures.toString() + ";");
         } catch (PackageManager.NameNotFoundException exception) {
             throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_UNKNOWN_EXCEPTION, "Exception on signature validation.", exception);
         } catch (NoSuchAlgorithmException exception) {
