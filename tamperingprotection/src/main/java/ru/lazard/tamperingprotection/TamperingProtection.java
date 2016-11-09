@@ -34,7 +34,7 @@ import java.util.zip.ZipFile;
  * protection.setAcceptStartOnEmulator(true);// allow run on emulator <br>
  * protection.setAcceptStartInDebugMode(true);// allow run in debug mode <br>
  * <p>
- * protection.validate();<br>
+ * protection.validateAll();<br>
  * </code>
  * <br><br>
  * Created by Egor on 08.11.2016.<br><br>
@@ -133,7 +133,7 @@ public class TamperingProtection {
      *
      * @return - True if valid. False if tampered.
      */
-    public boolean validate() {
+    public boolean validateAll() {
         try {
             validateAllOrThrowException();
             return true;

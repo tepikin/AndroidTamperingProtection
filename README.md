@@ -19,14 +19,10 @@ You can choose not all of this protection types. Most usefull is <i>"application
 Simple usage:<br>
 ```java
 TamperingProtection protection = new TamperingProtection(context);
-protection.setAcceptedDexCrcs(); // don't validate classes.dex CRC code.
-protection.setAcceptedStores(); // install from any where 
 protection.setAcceptedPackageNames("ru.lazard.sample"); // your package name
 protection.setAcceptedSignatures("CC:0C:FB:83:8C:88:A9:66:BB:0D:C9:C8:EB:A6:4F:32"); // MD5 fingerprint
-protection.setAcceptStartOnEmulator(true);// allow run on emulator 
-protection.setAcceptStartInDebugMode(true);// allow run in debug mode 
 
-protection.validate();// <- bool is valid or tampered.
+protection.validateAll();// <- bool is valid or tampered.
 ```
 
 

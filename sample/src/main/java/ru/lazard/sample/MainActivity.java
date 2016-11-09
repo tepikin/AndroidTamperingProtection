@@ -95,7 +95,7 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         protection.setAcceptedSignatures("CC:0C:FB:83:8C:88:A9:66:BB:0D:C9:C8:EB:A6:4F:32");
         protection.setAcceptStartOnEmulator(true);
         protection.setAcceptStartInDebugMode(true);
-        boolean isValid = protection.validate();
+        boolean isValid = protection.validateAll();
 
         showText(isValid ? "Valid" : "Tampered");
     }
