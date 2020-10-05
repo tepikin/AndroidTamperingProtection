@@ -1,5 +1,4 @@
 package ru.lazard.tamperingprotection;
-package ru.lazard.tamperingprotection;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
