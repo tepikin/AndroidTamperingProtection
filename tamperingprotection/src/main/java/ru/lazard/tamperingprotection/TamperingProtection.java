@@ -1,4 +1,5 @@
 package ru.lazard.tamperingprotection;
+package ru.lazard.tamperingprotection;
 
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
@@ -6,16 +7,24 @@ import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.os.Build;
-import android.support.annotation.NonNull;
 import android.text.TextUtils;
+import android.util.Log;
+
+import androidx.annotation.NonNull;
+
+
+import com.layapp.collages.BuildConfig;
 
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
+
+import kotlin.jvm.functions.Function1;
 
 /**
  * Class for check is application tampered or not.<br> TamperingProtection check: <br>
@@ -71,6 +80,40 @@ public class TamperingProtection {
         this.context = context;
     }
 
+
+    /**
+     * Get CRC code of resources.arsc file.<br><b>Note:</b> CRC code of .arsc modified each time when you modify resources.
+     *
+     * @param context
+     * @return - CRC code of resources.arsc file in apk.
+     * @throws IOException
+     */
+    @NonNull
+    public static long getResCRC(@NonNull Context context) throws IOException {
+        ZipFile zf = new ZipFile(context.getPackageCodePath());
+        long crc = 0;
+        ZipEntry ze2 = zf.getEntry("resources.arsc");
+        if (ze2 != null) {
+            crc+=ze2.getCrc();
+        }
+        Log.e("Crc", "RES's summ = " + ze2.getCrc());
+        return crc;
+    }
+
+
+    public static long getTotalCRC(@NonNull Context context) throws IOException {
+        ZipFile zf = new ZipFile(context.getPackageCodePath());
+        long crc = 0;
+        Enumeration<? extends ZipEntry> entries = zf.entries();
+        while(entries.hasMoreElements()){
+            ZipEntry zipEntry = entries.nextElement();
+            crc+=zipEntry.getCrc();
+        }
+        Log.e("Crc", "Total summ = " +crc);
+        return crc;
+    }
+
+
     /**
      * Get CRC code of classes.dex file.<br><b>Note:</b> CRC code of .dex modified each time when you modify java code.
      *
@@ -81,8 +124,23 @@ public class TamperingProtection {
     @NonNull
     public static long getDexCRC(@NonNull Context context) throws IOException {
         ZipFile zf = new ZipFile(context.getPackageCodePath());
-        ZipEntry ze = zf.getEntry("classes.dex");
-        return ze.getCrc();
+        long crc = 0;
+        for (int i = 1; i < 1000; i++) {
+            String index = ""+i;
+            if (i==1){
+                index="";
+            }
+            String name = "classes" + index + ".dex";
+            ZipEntry ze = zf.getEntry(name);
+            if (ze !=null){
+                crc+=ze.getCrc();
+            }else{
+                Log.e("Crc","DEX's summ = "+crc);
+                return crc;
+            }
+        }
+        Log.e("Crc","DEX's summ = "+crc);
+        return crc;
     }
 
 
