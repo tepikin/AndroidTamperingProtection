@@ -23,8 +23,6 @@ import java.util.List;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
-import kotlin.jvm.functions.Function1;
-
 /**
  * Class for check is application tampered or not.<br> TamperingProtection check: <br>
  * 1) CRC code of classes.dex - protection from code modification.<br>
