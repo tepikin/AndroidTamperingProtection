@@ -157,16 +157,24 @@ public class TamperingProtection {
      */
     @NonNull
     public static String[] getSignatures(@NonNull Context context) throws PackageManager.NameNotFoundException, NoSuchAlgorithmException {
-        PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_SIGNATURES);
-
-        if (packageInfo.signatures == null || packageInfo.signatures.length <= 0) {
+        // Avoid expliot or fake signature on Android 8.0 or higher
+        Signature[] signatures;
+        if (Build.VERSION.SDK_INT >= 26) {
+            PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_SIGNING_CERTIFICATES);
+            signatures = packageInfo.signingInfo.getApkContentsSigners();
+        } else {
+            PackageInfo packageInfo = context.getPackageManager().getPackageInfo(context.getPackageName(), PackageManager.GET_SIGNATURES);
+            signatures = packageInfo.signatures;
+        }
+        
+        if (signatures == null || signatures.length <= 0) {
             return new String[]{};
         }
 
-        String[] md5Signatures = new String[packageInfo.signatures.length];
+        String[] md5Signatures = new String[signatures.length];
 
-        for (int i = 0; i < packageInfo.signatures.length; i++) {
-            Signature signature = packageInfo.signatures[i];
+        for (int i = 0; i < signatures.length; i++) {
+            Signature signature = signatures[i];
             if (signature == null) continue;
 
             MessageDigest md = MessageDigest.getInstance("MD5");
