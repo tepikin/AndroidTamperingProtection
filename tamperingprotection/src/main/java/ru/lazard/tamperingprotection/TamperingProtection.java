@@ -440,18 +440,20 @@ public class TamperingProtection {
             if (md5Signatures == null || md5Signatures.length <= 0) {
                 throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_IS_EMPTY, "No signatures found.");
             }
-            // TODO Maybe multiple signatures is a type of tampering, but im not sure. If you sure then uncomment next rows.
-            // if (md5Signatures.length != 1) {
-            //     throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_MULTIPLE, "Multiple signatures found. Total signatures=" + packageInfo.signatures.length + ";");
-            // }
 
+            // Check all signatures
+            boolean allowed = false;
             for (String md5Signature : md5Signatures) {
                 for (String allowedSignature : signatures) {
-                    if (md5Signature.equalsIgnoreCase(allowedSignature))
-                        return;// validation success
+                    if (md5Signature.equalsIgnoreCase(allowedSignature)) {
+                        allowed = true;
+                        break;
+                    }
+                    allowed = false;
                 }
             }
-            throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_NOT_VALID, "Not valid signature: CurrentSignatures=" + md5Signatures + ";  validSignatures=" + signatures.toString() + ";");
+            if (!allowed)
+                throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_NOT_VALID, "Not valid signature: CurrentSignatures=" + md5Signatures + ";  validSignatures=" + signatures.toString() + ";");
         } catch (PackageManager.NameNotFoundException exception) {
             throw new ValidationException(ValidationException.ERROR_CODE_SIGNATURE_UNKNOWN_EXCEPTION, "Exception on signature validation.", exception);
         } catch (NoSuchAlgorithmException exception) {
